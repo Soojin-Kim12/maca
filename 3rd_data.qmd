@@ -136,65 +136,65 @@ CU_tk %>%
 ### 4. 자료분석-상대빈도 (작성중)
 #### 1) GS25, 세븐일레븐
 ```{r}
-GS25.seven_df <- rbind(GS25_df2, seven_df2)
-set.seed(35)
+#GS25.seven_df <- rbind(GS25_df2, seven_df2)
+#set.seed(35)
 
-GS25.seven_df <- 
-  GS25.seven_df %>% 
-  relocate(c(ID, text, label)) %>%
-  sample_n(size = 100)
+#GS25.seven_df <- 
+#  GS25.seven_df %>% 
+#  relocate(c(ID, text, label)) %>%
+#  sample_n(size = 100)
 
-rate_odds_df <- 
-GS25.seven_df %>% 
-  unnest_tokens(word, text, token = pos) %>% 
-  separate(word, c("word", "pos"), sep = "/") %>% 
-  filter(pos == "nng") %>% 
-  count(word) %>% 
-  pivot_wider(names_from = word,
-              values_from = n, 
-              values_fill = list(n = 0)) %>% 
-  rename(posi = `1`, nega = `0`) %>% 
-  mutate(odds_posi = ((posi+1)/sum(posi+1)),
-         odds_nega = ((nega+1)/sum(nega+1))) %>% 
-  mutate(posi_odds_ratio = (odds_posi / odds_nega)) %>% 
-  filter(rank(posi_odds_ratio) <= 20 | rank(-posi_odds_ratio) <= 20) %>%   arrange(-posi_odds_ratio)
+#rate_odds_df <- 
+#GS25.seven_df %>% 
+#  unnest_tokens(word, text, token = pos) %>% 
+#  separate(word, c("word", "pos"), sep = "/") %>% 
+#  filter(pos == "nng") %>% 
+#  count(word) %>% 
+#  pivot_wider(names_from = word,
+#              values_from = n, 
+#              values_fill = list(n = 0)) %>% 
+#  rename(posi = `1`, nega = `0`) %>% 
+#  mutate(odds_posi = ((posi+1)/sum(posi+1)),
+#         odds_nega = ((nega+1)/sum(nega+1))) %>% 
+#  mutate(posi_odds_ratio = (odds_posi / odds_nega)) %>% 
+#  filter(rank(posi_odds_ratio) <= 20 | rank(-posi_odds_ratio) <= 20) %>%   arrange(-posi_odds_ratio)
 
-rate_log_df <- 
-GS25.seven_df %>% 
-  unnest_tokens(word, text, token = pos) %>% 
-  separate(word, c("word", "pos"), sep = "/") %>% 
-  filter(pos == "nng") %>% 
-  count(word) %>% 
-  pivot_wider(names_from = label,
-              values_from = n, 
-              values_fill = list(n = 0)) %>% 
-  rename(posi = `1`, nega = `0`) %>% 
-  mutate(odds_posi = ((posi+1)/sum(posi+1)),
-         odds_nega = ((nega+1)/sum(nega+1))) %>% 
-  mutate(log_odds_ratio = log(odds_posi / odds_nega)) 
+#rate_log_df <- 
+#GS25.seven_df %>% 
+#  unnest_tokens(word, text, token = pos) %>% 
+#  separate(word, c("word", "pos"), sep = "/") %>% 
+#  filter(pos == "nng") %>% 
+#  count(word) %>% 
+#  pivot_wider(names_from = label,
+#              values_from = n, 
+#              values_fill = list(n = 0)) %>% 
+#  rename(posi = `1`, nega = `0`) %>% 
+#  mutate(odds_posi = ((posi+1)/sum(posi+1)),
+#         odds_nega = ((nega+1)/sum(nega+1))) %>% 
+#  mutate(log_odds_ratio = log(odds_posi / odds_nega)) 
 
-weighted_log_odds_df <- 
-GS25.seven_df %>% 
-  unnest_tokens(word, text, token = pos) %>% 
-  separate(word, c("word", "pos"), sep = "/") %>% 
-  filter(str_length(word) > 1) %>%
-  filter(pos == "nng") %>% 
-  filter(word != "gs25") %>% 
-  filter(word != "세븐일레븐") %>% 
-  count(word) %>% 
-  bind_log_odds(set = label,
-                feature = word,
-                n = n) %>% 
-  arrange(-log_odds_weighted)
+#weighted_log_odds_df <- 
+#GS25.seven_df %>% 
+#  unnest_tokens(word, text, token = pos) %>% 
+#  separate(word, c("word", "pos"), sep = "/") %>% 
+#  filter(str_length(word) > 1) %>%
+#  filter(pos == "nng") %>% 
+#  filter(word != "gs25") %>% 
+#  filter(word != "세븐일레븐") %>% 
+#  count(word) %>% 
+#  bind_log_odds(set = label,
+#                feature = word,
+#                n = n) %>% 
+#  arrange(-log_odds_weighted)
 
-weighted_log_odds_df %>%
-  group_by(label = ifelse(label > 0, "GS25", "세븐일레븐")) %>%
-  slice_max(abs(log_odds_weighted), n = 10) %>%
-  ggplot(aes(x = log_odds_weighted,
-             y = reorder(word, log_odds_weighted),
-             fill = label)) +
-  geom_col(show.legend = F) +
-  facet_wrap(~label, scale = "free")
+#weighted_log_odds_df %>%
+#  group_by(label = ifelse(label > 0, "GS25", "세븐일레븐")) %>%
+#  slice_max(abs(log_odds_weighted), n = 10) %>%
+#  ggplot(aes(x = log_odds_weighted,
+#             y = reorder(word, log_odds_weighted),
+#             fill = label)) +
+#  geom_col(show.legend = F) +
+#  facet_wrap(~label, scale = "free")
 ```
 
 #### 2) GS25, CU
@@ -205,19 +205,14 @@ weighted_log_odds_df %>%
 ### 5. 감정분석
 #### 1) 사전 데이터 프레임 만들기
 ```{r}
-pkg_v <- c("tidyverse", "tidytext", "epubr", "RcppMeCab", "KoNLP" )
-lapply(pkg_v, require, ch = T)
+# pkg_v <- c("tidyverse", "tidytext", "epubr", "RcppMeCab", "KoNLP" )
+#lapply(pkg_v, require, ch = T)
 
-url_v <- "https://github.com/park1200656/KnuSentiLex/archive/refs/heads/master.zip"
-dest_v <- "data/knusenti.zip"
-download.file(url = url_v, destfile = dest_v, mode = "wb")
+# url_v <- "https://github.com/park1200656/KnuSentiLex/archive/refs/heads/master.zip"
+# dest_v <- "data/knusenti.zip"
+# download.file(url = url_v, destfile = dest_v, mode = "wb")
 
-unzip("knusenti.zip", exdir=outPath)
-```
-
-```{r}
-list.files("data/.")
-list.files("data/knusenti/KnuSentiLex-master/.")
+# unzip("knusenti.zip", exdir=outPath)
 ```
 
 ```{r}
