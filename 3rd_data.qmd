@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 title: "언론분석을 통한 편의점 평판 비교 분석"
 format: html
@@ -729,3 +730,736 @@ CU_gamma_terms %>%
 
 
 
+=======
+---
+title: "언론분석을 통한 편의점 평판 비교 분석"
+format: html
+editor: visual
+---
+
+### 1. 개요
+#### 1) 분석주제 및 선정 이유
+- 분석 주제 : 언론분석을 통한 편의점 평판 비교 분석
+- 주제 선정 이유 : 최근 들어 커머스 분야가 다양해짐에 따라 
+  대형마트, 중형마트, 온라인 커머스, 편의점 등이 각각의 장단점을 활용하여 경영전략 및 마케팅을 펼치고 있다. 
+  그 중에서도 편의점은 소비자들의 생활반경 근처에 다수 포진해있음에 따라 적극적인 변화를 모색하고 있다. 
+  대표적으로 원소주, 말차 등 유명 브랜드의 상품을 독점 판매하거나 
+  tv프로그램 '편스토랑' 등과 같이 콜라보 프로젝트를 진행하고 있다. 
+  이러한 상황에서 각각의 편의점의 평판을 분석하여 어떠한 차이를 보이고 있는지 살펴보고자 한다.
+
+#### 2) 자료분석 방법
+- 자료 유형 : 뉴스 (정치, 사회, 스포츠 뉴스 제외)
+- 자료 출처 : 빅카인즈
+- 자료 기간 : 2022. 08. 01. ~ 2022. 09. 17.
+
+
+### 2. 자료 수집
+#### - 패키지 설치
+```{r}
+package_list <- c("tidyverse", "tidytext", "readxl", "kableExtra", 
+                  "multilinguer", "RcppMeCab", "KoNLP", "lubridate", 
+                  "tidylo", "stm", "reshape2", "dplyr", "ggplot2", 
+                  "stringr", "rvest", "wordcloud", "tm", "VennDiagram")
+ #package_list_installed <- package_list %in% installed.packages()[,"Package"]
+ #new_pkg <- package_list[!package_list_installed]
+ #if(length(new_pkg)) install.packages(new_pkg)
+
+lapply(package_list, require, character.only = TRUE)
+```
+
+#### - 데이터셋 수집
+```{r}
+GS25_df <- readxl::read_excel("GS25_test_data.xlsx") %>% 
+  select(제목, 본문)
+
+seven_df <- readxl::read_excel("seveneleven_test_data.xlsx") %>% 
+  select(제목, 본문)
+
+CU_df <- readxl::read_excel("CU_test_data.xlsx") %>% 
+  select(제목, 본문)
+```
+
+
+### 3. 자료분석-총빈도
+#### 1) GS25
+```{r}
+GS25_df2 <- GS25_df %>% 
+  distinct(제목, .keep_all = T) %>% 
+  mutate(ID = factor(row_number())) %>% 
+  mutate(label = "0") %>%
+  unite(제목, 본문, col = "text", sep = " ") %>% 
+  mutate(text = str_squish(text))
+
+GS25_tk <- GS25_df2 %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F) %>%
+  count(word, sort = T)
+
+GS25_tk <- 
+GS25_tk %>% 
+  filter(!word %in% c("gs", "gs25", "리테일", "기자", "편의점")) %>% 
+  filter(str_detect(word, "[:alpha:]+")) 
+
+GS25_tk %>%
+  filter(str_length(word) > 1) %>%
+  slice_max(n, n = 15) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "GS25 총빈도")
+```
+
+#### 2) 세븐일레븐
+```{r}
+seven_df2 <- seven_df %>% 
+  distinct(제목, .keep_all = T) %>% 
+  mutate(ID = factor(row_number())) %>% 
+  mutate(label = "0") %>%
+  unite(제목, 본문, col = "text", sep = " ") %>% 
+  mutate(text = str_squish(text))
+
+seven_tk <- seven_df2 %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F) %>%
+  count(word, sort = T)
+
+seven_tk <- 
+seven_tk %>% 
+  filter(!word %in% c("세븐일레븐", "기자", "편의점", "롯데")) %>% 
+  filter(str_detect(word, "[:alpha:]+")) 
+
+seven_tk %>%
+  filter(str_length(word) > 1) %>%
+  slice_max(n, n = 15) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "세븐일레븐 총빈도")
+
+```
+
+#### 3) CU
+```{r}
+CU_df2 <- CU_df %>% 
+  distinct(제목, .keep_all = T) %>% 
+  mutate(ID = factor(row_number())) %>% 
+  mutate(label = "0") %>%
+  unite(제목, 본문, col = "text", sep = " ") %>% 
+  mutate(text = str_squish(text))
+
+CU_tk <- CU_df2 %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F) %>%
+  count(word, sort = T)
+
+CU_tk <- 
+CU_tk %>% 
+  filter(!word %in% c("cu", "기자", "편의점", "리테일", "bgf")) %>% 
+  filter(str_detect(word, "[:alpha:]+")) 
+
+CU_tk %>%
+  filter(str_length(word) > 1) %>%
+  slice_max(n, n = 15) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "CU 총빈도")
+
+```
+
+
+### 4. 자료분석-상대빈도 (작성중)
+#### 1) GS25, 세븐일레븐
+```{r}
+#GS25.seven_df <- rbind(GS25_df2, seven_df2)
+#set.seed(35)
+
+#GS25.seven_df <- 
+#  GS25.seven_df %>% 
+#  relocate(c(ID, text, label)) %>%
+#  sample_n(size = 100)
+
+#rate_odds_df <- 
+#GS25.seven_df %>% 
+#  unnest_tokens(word, text, token = pos) %>% 
+#  separate(word, c("word", "pos"), sep = "/") %>% 
+#  filter(pos == "nng") %>% 
+#  count(word) %>% 
+#  pivot_wider(names_from = word,
+#              values_from = n, 
+#              values_fill = list(n = 0)) %>% 
+#  rename(posi = `1`, nega = `0`) %>% 
+#  mutate(odds_posi = ((posi+1)/sum(posi+1)),
+#         odds_nega = ((nega+1)/sum(nega+1))) %>% 
+#  mutate(posi_odds_ratio = (odds_posi / odds_nega)) %>% 
+#  filter(rank(posi_odds_ratio) <= 20 | rank(-posi_odds_ratio) <= 20) %>%   arrange(-posi_odds_ratio)
+
+#rate_log_df <- 
+#GS25.seven_df %>% 
+#  unnest_tokens(word, text, token = pos) %>% 
+#  separate(word, c("word", "pos"), sep = "/") %>% 
+#  filter(pos == "nng") %>% 
+#  count(word) %>% 
+#  pivot_wider(names_from = label,
+#              values_from = n, 
+#              values_fill = list(n = 0)) %>% 
+#  rename(posi = `1`, nega = `0`) %>% 
+#  mutate(odds_posi = ((posi+1)/sum(posi+1)),
+#         odds_nega = ((nega+1)/sum(nega+1))) %>% 
+#  mutate(log_odds_ratio = log(odds_posi / odds_nega)) 
+
+#weighted_log_odds_df <- 
+#GS25.seven_df %>% 
+#  unnest_tokens(word, text, token = pos) %>% 
+#  separate(word, c("word", "pos"), sep = "/") %>% 
+#  filter(str_length(word) > 1) %>%
+#  filter(pos == "nng") %>% 
+#  filter(word != "gs25") %>% 
+#  filter(word != "세븐일레븐") %>% 
+#  count(word) %>% 
+#  bind_log_odds(set = label,
+#                feature = word,
+#                n = n) %>% 
+#  arrange(-log_odds_weighted)
+
+#weighted_log_odds_df %>%
+#  group_by(label = ifelse(label > 0, "GS25", "세븐일레븐")) %>%
+#  slice_max(abs(log_odds_weighted), n = 10) %>%
+#  ggplot(aes(x = log_odds_weighted,
+#             y = reorder(word, log_odds_weighted),
+#             fill = label)) +
+#  geom_col(show.legend = F) +
+#  facet_wrap(~label, scale = "free")
+```
+
+#### 2) GS25, CU
+
+#### 3) 세븐일레븐, CU
+
+
+### 5. 감정분석
+#### 1) 사전 데이터 프레임 만들기
+```{r}
+# pkg_v <- c("tidyverse", "tidytext", "epubr", "RcppMeCab", "KoNLP" )
+#lapply(pkg_v, require, ch = T)
+
+# url_v <- "https://github.com/park1200656/KnuSentiLex/archive/refs/heads/master.zip"
+# dest_v <- "data/knusenti.zip"
+# download.file(url = url_v, destfile = dest_v, mode = "wb")
+
+# unzip("knusenti.zip", exdir=outPath)
+```
+
+```{r}
+senti_name_v <- list.files("data/knusenti/KnuSentiLex-master/.")[9]
+senti_dic_df <- read_tsv(str_c("data/knusenti/KnuSentiLex-master/", senti_name_v), col_names = F)
+senti_dic_df <- senti_dic_df %>% rename(word = X1, sScore = X2)
+knu_dic_df <- senti_dic_df %>% 
+  filter(!is.na(sScore))
+```
+
+#### 2) GS25
+```{r}
+GS25_senti_df <- GS25_df2 %>% 
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  count(word, sScore, sort = T) %>% 
+  filter(str_length(word) > 1) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  slice_head(n = 20)
+
+GS25_senti_df %>% 
+  ggplot() + geom_col(aes(n, word, fill = sScore), show.legend = F) +
+    labs(title = "GS25 감정빈도 분석")
+```
+
+#### 3) 세븐일레븐
+```{r}
+seven_senti_df <- seven_df2 %>% 
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  count(word, sScore, sort = T) %>% 
+  filter(str_length(word) > 1) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  slice_head(n = 20)
+
+seven_senti_df %>% 
+  ggplot() + geom_col(aes(n, word, fill = sScore), show.legend = F) +
+    labs(title = "세븐일레븐 감정빈도 분석")
+```
+
+#### 4) CU
+```{r}
+CU_senti_df <- CU_df2 %>% 
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  count(word, sScore, sort = T) %>% 
+  filter(str_length(word) > 1) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  slice_head(n = 20)
+
+CU_senti_df %>% 
+  ggplot() + geom_col(aes(n, word, fill = sScore), show.legend = F) +
+    labs(title = "CU 감정빈도 분석")
+```
+
+
+### 6. 감정분석 - 긍정어, 부정어
+#### 1) GS25
+```{r}
+GS25_df2 %>% 
+  unnest_tokens(word, text) %>% 
+  left_join(knu_dic_df) %>% 
+  mutate(sScore = ifelse(sScore >= 1, "긍정",
+                         ifelse(sScore <= -1, "부정", "중립"))) %>% 
+  count(sScore)
+
+GS25_df2 %>%   
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  mutate(emotion = ifelse(sScore > 0, "긍정", ifelse(sScore < 0, "부정", "중립"))) %>%
+  mutate(label = ifelse(sScore > 0, "1", ifelse(sScore < 0, "0", "2"))) %>%
+  filter(label != "중립") %>%
+  count(word, emotion, label, sort = T) %>%
+  filter(str_length(word) > 1) %>%
+  group_by(label = ifelse(label > 0, "긍정", "부정")) %>%
+  slice_head(n = 15) %>%
+  ggplot(aes(x = n,
+             y = reorder(word, n), fill = label)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~label, scale = "free") +
+  labs(title = "GS25 긍정어 부정어")
+```
+
+#### 2) 세븐일레븐
+```{r}
+seven_df2 %>% 
+  unnest_tokens(word, text) %>% 
+  left_join(knu_dic_df) %>% 
+  mutate(sScore = ifelse(sScore >= 1, "긍정",
+                         ifelse(sScore <= -1, "부정", "중립"))) %>% 
+  count(sScore)
+
+seven_df2 %>%   
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  mutate(emotion = ifelse(sScore > 0, "긍정", ifelse(sScore < 0, "부정", "중립"))) %>%
+  mutate(label = ifelse(sScore > 0, "1", ifelse(sScore < 0, "0", "2"))) %>%
+  filter(label != "중립") %>%
+  count(word, emotion, label, sort = T) %>%
+  filter(str_length(word) > 1) %>%
+  group_by(label = ifelse(label > 0, "긍정", "부정")) %>%
+  slice_head(n = 15) %>%
+  ggplot(aes(x = n,
+             y = reorder(word, n), fill = label)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~label, scale = "free") +
+  labs(title = "세븐일레븐 긍정어 부정어")
+```
+
+#### 3) CU
+```{r}
+CU_df2 %>% 
+  unnest_tokens(word, text) %>% 
+  left_join(knu_dic_df) %>% 
+  mutate(sScore = ifelse(sScore >= 1, "긍정",
+                         ifelse(sScore <= -1, "부정", "중립"))) %>% 
+  count(sScore)
+
+CU_df2 %>%   
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  mutate(emotion = ifelse(sScore > 0, "긍정", ifelse(sScore < 0, "부정", "중립"))) %>%
+  mutate(label = ifelse(sScore > 0, "1", ifelse(sScore < 0, "0", "2"))) %>%
+  filter(label != "중립") %>%
+  count(word, emotion, label, sort = T) %>%
+  filter(str_length(word) > 1) %>%
+  group_by(label = ifelse(label > 0, "긍정", "부정")) %>%
+  slice_head(n = 15) %>%
+  ggplot(aes(x = n,
+             y = reorder(word, n), fill = label)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~label, scale = "free") +
+  labs(title = "CU 긍정어 부정어")
+```
+
+#### 4) 벤다이어그램
+##### - 긍정어, 부정어 구분
+```{r}
+library(VennDiagram)
+
+#GS25
+GS25_df3 <- GS25_df2 %>%   
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  mutate(emotion = ifelse(sScore > 0, "긍정", ifelse(sScore < 0, "부정", "중립"))) %>%
+  mutate(label = ifelse(sScore > 0, "1", ifelse(sScore < 0, "0", "2"))) %>%
+  filter(label != "중립") %>%
+  count(word, emotion, label, sort = T) %>%
+  filter(str_length(word) > 1) %>%
+  group_by(label = ifelse(label > 0, "긍정", "부정"))
+
+GS25_good_df <- GS25_df3[GS25_df3$label == '긍정', ]
+GS25_bad_df <- GS25_df3[GS25_df3$label == '부정', ]
+
+#세븐일레븐
+seven_df3 <- seven_df2 %>%   
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  mutate(emotion = ifelse(sScore > 0, "긍정", ifelse(sScore < 0, "부정", "중립"))) %>%
+  mutate(label = ifelse(sScore > 0, "1", ifelse(sScore < 0, "0", "2"))) %>%
+  filter(label != "중립") %>%
+  count(word, emotion, label, sort = T) %>%
+  filter(str_length(word) > 1) %>%
+  group_by(label = ifelse(label > 0, "긍정", "부정"))
+
+seven_good_df <- seven_df3[seven_df3$label == '긍정', ]
+seven_bad_df <- seven_df3[seven_df3$label == '부정', ]
+
+#CU
+CU_df3 <- CU_df2 %>%   
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  mutate(emotion = ifelse(sScore > 0, "긍정", ifelse(sScore < 0, "부정", "중립"))) %>%
+  mutate(label = ifelse(sScore > 0, "1", ifelse(sScore < 0, "0", "2"))) %>%
+  filter(label != "중립") %>%
+  count(word, emotion, label, sort = T) %>%
+  filter(str_length(word) > 1) %>%
+  group_by(label = ifelse(label > 0, "긍정", "부정"))
+
+CU_good_df <- CU_df3[CU_df3$label == '긍정', ]
+CU_bad_df <- CU_df3[CU_df3$label == '부정', ]
+
+```
+
+##### - 긍정어 기준 벤다이어그램 (작성중)
+```{r}
+library(VennDiagram)
+
+#good_l <- list(A = GS25_good_df, B = seven_good_df, C = CU_good_df)
+#VennDiagram (
+#  good_l,
+#  fill = c(3, 2, 7),
+#  alpha = c(0.5, 0.5, 0.5),
+#  lty = c(1, 2, 3),
+#  filename = "convenience store_good"
+#)
+```
+
+##### - 부정어 기준 벤다이어그램 (작성중)
+
+
+### 7. 토픽모델링
+#### 1) GS25
+```{r}
+GS25_topic_tk <- GS25_df2 %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F)
+
+GS25_topic_tk <- 
+GS25_topic_tk %>% 
+  filter(!word %in% c("gs", "gs25", "리테일", "기자", "편의점")) %>% 
+  filter(str_detect(word, "[:alpha:]+"))
+
+GS25_combined_df <-
+  GS25_topic_tk %>%
+  group_by(ID) %>%
+  summarise(text2 = str_flatten(word, " ")) %>%
+  ungroup() %>% 
+  inner_join(GS25_df2, by = "ID")
+
+library(stm)
+library(tm)
+
+processed <- 
+  GS25_df2 %>% textProcessor(
+    documents = GS25_combined_df$text2,
+    metadata = .,
+    wordLengths = c(2, Inf)
+    )
+
+out <-
+  prepDocuments(processed$documents,
+                processed$vocab,
+                processed$meta, 
+                lower.thresh = 0)
+docs <- out$documents
+vocab <- out$vocab
+meta <- out$meta
+topicN <- c(3, 10)
+storage <- searchK(out$documents, out$vocab, K = topicN)
+
+GS25_stm_fit <-
+  stm(
+    documents = docs,
+    vocab = vocab,
+    K = 6,
+    data = meta,
+    max.em.its = 75,
+    init.type = "Spectral",
+    seed = 25,
+    verbose = F
+  )
+
+GS25_td_beta <- GS25_stm_fit %>% tidy(matrix = 'beta') 
+GS25_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 7) %>% 
+  ungroup() %>% 
+  mutate(topic = str_c("주제", topic)) %>% 
+  ggplot(aes(x = beta, 
+             y = reorder(term, beta),
+             fill = topic)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~topic, scales = "free") +
+  labs(x = expression("단어 확률분포: "~beta), y = NULL,
+       title = "주제별 단어 확률 분포",
+       subtitle = "각 주제별로 다른 단어들로 군집") +
+  theme(plot.title = element_text(size = 20))
+```
+
+#### 2) 세븐일레븐
+```{r}
+seven_topic_tk <- seven_df2 %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F)
+
+seven_topic_tk <- 
+seven_topic_tk %>% 
+  filter(!word %in% c("세븐일레븐", "기자", "편의점", "롯데")) %>% 
+  filter(str_detect(word, "[:alpha:]+"))
+
+seven_combined_df <-
+  seven_topic_tk %>%
+  group_by(ID) %>%
+  summarise(text2 = str_flatten(word, " ")) %>%
+  ungroup() %>% 
+  inner_join(seven_df2, by = "ID")
+
+library(stm)
+library(tm)
+
+processed <- 
+  seven_df2 %>% textProcessor(
+    documents = seven_combined_df$text2,
+    metadata = .,
+    wordLengths = c(2, Inf)
+    )
+
+out <-
+  prepDocuments(processed$documents,
+                processed$vocab,
+                processed$meta, 
+                lower.thresh = 0)
+docs <- out$documents
+vocab <- out$vocab
+meta <- out$meta
+topicN <- c(3, 10)
+storage <- searchK(out$documents, out$vocab, K = topicN)
+
+seven_stm_fit <-
+  stm(
+    documents = docs,
+    vocab = vocab,
+    K = 6,
+    data = meta,
+    max.em.its = 75,
+    init.type = "Spectral",
+    seed = 25,
+    verbose = F
+  )
+
+seven_td_beta <- seven_stm_fit %>% tidy(matrix = 'beta') 
+seven_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 7) %>% 
+  ungroup() %>% 
+  mutate(topic = str_c("주제", topic)) %>% 
+  ggplot(aes(x = beta, 
+             y = reorder(term, beta),
+             fill = topic)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~topic, scales = "free") +
+  labs(x = expression("단어 확률분포: "~beta), y = NULL,
+       title = "주제별 단어 확률 분포",
+       subtitle = "각 주제별로 다른 단어들로 군집") +
+  theme(plot.title = element_text(size = 20))
+```
+
+#### 3) CU
+```{r}
+CU_topic_tk <- CU_df2 %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F)
+
+CU_topic_tk <- 
+CU_topic_tk %>% 
+  filter(!word %in% c("cu", "기자", "편의점", "리테일", "bgf")) %>% 
+  filter(str_detect(word, "[:alpha:]+"))
+
+CU_combined_df <-
+  CU_topic_tk %>%
+  group_by(ID) %>%
+  summarise(text2 = str_flatten(word, " ")) %>%
+  ungroup() %>% 
+  inner_join(CU_df2, by = "ID")
+
+library(stm)
+library(tm)
+
+processed <- 
+  CU_df2 %>% textProcessor(
+    documents = CU_combined_df$text2,
+    metadata = .,
+    wordLengths = c(2, Inf)
+    )
+
+out <-
+  prepDocuments(processed$documents,
+                processed$vocab,
+                processed$meta, 
+                lower.thresh = 0)
+docs <- out$documents
+vocab <- out$vocab
+meta <- out$meta
+topicN <- c(3, 10)
+storage <- searchK(out$documents, out$vocab, K = topicN)
+
+CU_stm_fit <-
+  stm(
+    documents = docs,
+    vocab = vocab,
+    K = 6,
+    data = meta,
+    max.em.its = 75,
+    init.type = "Spectral",
+    seed = 25,
+    verbose = F
+  )
+
+CU_td_beta <- CU_stm_fit %>% tidy(matrix = 'beta') 
+CU_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 7) %>% 
+  ungroup() %>% 
+  mutate(topic = str_c("주제", topic)) %>% 
+  ggplot(aes(x = beta, 
+             y = reorder(term, beta),
+             fill = topic)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~topic, scales = "free") +
+  labs(x = expression("단어 확률분포: "~beta), y = NULL,
+       title = "주제별 단어 확률 분포",
+       subtitle = "각 주제별로 다른 단어들로 군집") +
+  theme(plot.title = element_text(size = 20))
+```
+
+
+### 8. 관련보도 상위 주제어
+#### 1) GS25
+```{r}
+GS25_td_gamma <- GS25_stm_fit %>% tidy(matrix = "gamma") 
+GS25_top_terms <- 
+GS25_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 5) %>% 
+  select(topic, term) %>% 
+  summarise(terms = str_flatten(term, collapse = ", ")) 
+
+GS25_gamma_terms <- 
+GS25_td_gamma %>% 
+  group_by(topic) %>% 
+  summarise(gamma = mean(gamma)) %>% 
+  left_join(GS25_top_terms, by = 'topic') %>% 
+  mutate(topic = str_c("주제", topic),
+         topic = reorder(topic, gamma))
+
+GS25_gamma_terms %>% 
+  ggplot(aes(x = gamma, y = topic, fill = topic)) +
+  geom_col(show.legend = F) +
+  geom_text(aes(label = round(gamma, 2)),  
+            hjust = 1.4) +                
+  geom_text(aes(label = terms), 
+            hjust = -0.05) +              
+  scale_x_continuous(expand = c(0, 0),    
+                     limit = c(0, 1)) +   
+  labs(x = expression("문서 확률분포"~(gamma)), y = NULL,
+       title = "GS25 관련보도 상위 주제어",
+       subtitle = "주제별로 기여도가 높은 단어 중심") +
+  theme(plot.title = element_text(size = 20))
+```
+
+#### 2) 세븐일레븐
+```{r}
+seven_td_gamma <- seven_stm_fit %>% tidy(matrix = "gamma") 
+seven_top_terms <- 
+seven_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 5) %>% 
+  select(topic, term) %>% 
+  summarise(terms = str_flatten(term, collapse = ", ")) 
+
+seven_gamma_terms <- 
+seven_td_gamma %>% 
+  group_by(topic) %>% 
+  summarise(gamma = mean(gamma)) %>% 
+  left_join(GS25_top_terms, by = 'topic') %>% 
+  mutate(topic = str_c("주제", topic),
+         topic = reorder(topic, gamma))
+
+seven_gamma_terms %>% 
+  ggplot(aes(x = gamma, y = topic, fill = topic)) +
+  geom_col(show.legend = F) +
+  geom_text(aes(label = round(gamma, 2)),  
+            hjust = 1.4) +                
+  geom_text(aes(label = terms), 
+            hjust = -0.05) +              
+  scale_x_continuous(expand = c(0, 0),    
+                     limit = c(0, 1)) +   
+  labs(x = expression("문서 확률분포"~(gamma)), y = NULL,
+       title = "세븐일레븐 관련보도 상위 주제어",
+       subtitle = "주제별로 기여도가 높은 단어 중심") +
+  theme(plot.title = element_text(size = 20))
+```
+
+#### 3) CU
+```{r}
+CU_td_gamma <- CU_stm_fit %>% tidy(matrix = "gamma") 
+CU_top_terms <- 
+CU_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 5) %>% 
+  select(topic, term) %>% 
+  summarise(terms = str_flatten(term, collapse = ", ")) 
+
+CU_gamma_terms <- 
+CU_td_gamma %>% 
+  group_by(topic) %>% 
+  summarise(gamma = mean(gamma)) %>% 
+  left_join(GS25_top_terms, by = 'topic') %>% 
+  mutate(topic = str_c("주제", topic),
+         topic = reorder(topic, gamma))
+
+CU_gamma_terms %>% 
+  ggplot(aes(x = gamma, y = topic, fill = topic)) +
+  geom_col(show.legend = F) +
+  geom_text(aes(label = round(gamma, 2)),  
+            hjust = 1.4) +                
+  geom_text(aes(label = terms), 
+            hjust = -0.05) +              
+  scale_x_continuous(expand = c(0, 0),    
+                     limit = c(0, 1)) +   
+  labs(x = expression("문서 확률분포"~(gamma)), y = NULL,
+       title = "CU 관련보도 상위 주제어",
+       subtitle = "주제별로 기여도가 높은 단어 중심") +
+  theme(plot.title = element_text(size = 20))
+```
+
+
+
+
+
+>>>>>>> 2623ec049b5e3ab60ba3b67aa46fe2b2aa46c368
