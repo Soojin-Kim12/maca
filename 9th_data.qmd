@@ -1,0 +1,599 @@
+---
+title: "언론보도 분석을 통한 편의점의 연도별 이슈 및 트렌드 비교분석"
+subtitle: "2021. 01. 01. ~ 2021. 10. 31. / 2022. 01. 01. ~ 2022. 10. 31."
+format: 
+  html:
+    code-fold: true
+    code-tools: true
+editor: visual
+author: 언론홍보학과 4학년 김수진(2018102101)
+title-block-style: default
+title-block-banner: "#c7c3c3"
+date: 2022. 11. 02.
+---
+
+### 1. 개요
+#### 1) 분석주제 및 선정 이유
+-   분석 주제 : 언론보도 분석을 통한 편의점의 연도별 이슈 및 트렌드 비교분석
+-   주제 선정 이유 : 앞에서 진행한 '언론보도분석을 통한 편의점 3사 평판 비교분석', '언론보도 분석을 통한 GS25의 연도별 평판 비교분석' 보고서를 통해 편의점들의 사업확장 및 기업 인수를 통해 경쟁이 더 심화되고 있음을 확인하였다. 이 가운데 GS25가 편의점 트렌드에 맞춰 평판관리를 진행하고 있는지 살펴보기 위해 '편의점의 연도별 이슈 및 트렌드'를 살펴보려고 한다.
+
+#### 2) 자료분석 방법
+-   자료 유형 : 뉴스 (정치, 사회, 스포츠 뉴스 제외)
+-   자료 출처 : 빅카인즈
+-   자료수집
+    1)  편의점 (2021)
+    -   검색어 : 편의점
+    -   자료 기간 : 2021. 01. 01. \~ 2021. 10. 31. (약 10개월)
+    -   총 3883건의 기사
+    2)  편의점 (2022)
+    -   검색어 : 편의점
+    -   자료 기간 : 2022. 01. 01. \~ 2022. 10. 31. (약 10개월)
+    -   총 3532건의 기사
+
+
+### 2. 자료 수집
+#### 1) 패키지 설치
+```{r}
+#| label: 패키지 설치
+#| echo: true
+#| warning: false
+#| output: false
+
+package_list <- c("tidyverse", "tidytext", "readxl", "kableExtra", 
+                  "multilinguer", "RcppMeCab", "KoNLP", "lubridate", 
+                  "tidylo", "stm", "reshape2", "dplyr", "ggplot2", 
+                  "stringr", "rvest", "wordcloud", "tm", "VennDiagram", "gt")
+ 
+#package_list_installed <- package_list %in% installed.packages()[,"Package"]
+# new_pkg <- package_list[!package_list_installed]
+# if(length(new_pkg)) install.packages(new_pkg)
+
+lapply(package_list, require, character.only = TRUE)
+```
+
+#### 2) 데이터셋 수집
+```{r}
+#| label: 데이터셋 수집
+#| echo: true
+#| warning: false
+
+store_2021_df <- readxl::read_excel("store_21_data.xlsx") %>% 
+  select(제목, 본문)
+
+store_2022_df <- readxl::read_excel("store_22_data.xlsx") %>% 
+  select(제목, 본문)
+```
+
+
+### 3. 자료분석-총빈도
+#### 1) 편의점 (2021. 01. 01. ~ 2021. 10. 31. / 약 10개월)
+```{r}
+#| label: 총빈도_편의점 (2021)
+#| echo: true
+#| warning: false
+
+store_2021_df <- store_2021_df %>% 
+  distinct(제목, .keep_all = T) %>% 
+  mutate(ID = factor(row_number())) %>% 
+  mutate(label = "0") %>%
+  unite(제목, 본문, col = "text", sep = " ") %>% 
+  mutate(text = str_squish(text))
+
+store_2021_tk <- store_2021_df %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F) %>%
+  count(word, sort = T)
+
+store_2021_tk <- 
+store_2021_tk %>% 
+  filter(!word %in% c("기자", "편의점")) %>% 
+  filter(str_detect(word, "[:alpha:]+")) %>%
+  filter(str_length(word) > 1) %>%
+  slice_max(n, n = 15) %>% 
+  mutate(word = reorder(word, n))
+
+store_2021_tk %>%
+  ggplot(aes(word, n)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "편의점 총빈도 (2021)")
+```
+
+#### 2) 편의점 (2022. 01. 01. ~ 2022. 10. 31. / 약 10개월)
+```{r}
+#| label: 총빈도_편의점 (2022)
+#| echo: true
+#| warning: false
+
+store_2022_df <- store_2022_df %>% 
+  distinct(제목, .keep_all = T) %>% 
+  mutate(ID = factor(row_number())) %>% 
+  mutate(label = "0") %>%
+  unite(제목, 본문, col = "text", sep = " ") %>% 
+  mutate(text = str_squish(text))
+
+store_2022_tk <- store_2022_df %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F) %>%
+  count(word, sort = T)
+
+store_2022_tk <- 
+store_2022_tk %>% 
+  filter(!word %in% c("기자", "편의점")) %>% 
+  filter(str_detect(word, "[:alpha:]+")) %>%
+  filter(str_length(word) > 1) %>%
+  slice_max(n, n = 15) %>% 
+  mutate(word = reorder(word, n))
+
+store_2022_tk %>%
+  ggplot(aes(word, n)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "편의점 총빈도 (2022)")
+```
+
+#### 3) 분석
+- 전반적으로 '출시', '판매', '리테일' 등 편의점의 기본적인 기능과 관련된 단어들이 많이 언급되고 있음.
+- 2021년에는 '맥주'가, 2022년에는 '키트'가 주요 상품으로 보임. 여기서 '키트'는 코로나19 단어와 함께 있는 것으로 보아 '코로나 자가진단키트'를 의미함.
+- 2021년 총빈도를 살펴보면 CU, GS25, 세븐일레븐 순으로 편의점 브랜드 언급이 많았음. 그리고 CU의 경우, 2021년과 2022년에 모두 언급된 유일한 브랜드임.
+
+
+### 4. 자료분석-상대빈도
+```{r}
+#| label: 상대빈도_세팅
+#| echo: true
+#| warning: false
+
+weighted_log_odds_df <-
+  bind_rows(store_2021_tk, store_2022_tk, .id = "party") %>% 
+  bind_log_odds(set = party,
+                feature = word, 
+                n = n) %>% 
+  arrange(-log_odds_weighted)
+```
+
+```{r}
+#| label: 상대빈도
+#| echo: true
+#| warning: false
+
+library(gt)
+library(dplyr)
+
+store_2021.2022_df <- bind_cols(
+  weighted_log_odds_df %>%   
+  group_by(party = ifelse(party == 1, "store(2021)", "store(2022)")) %>% 
+  arrange(party) %>% 
+  select(-party) %>%
+  head(15),
+  
+  weighted_log_odds_df %>%   
+  group_by(party = ifelse(party == 1, "store(2021)", "store(2022)")) %>% 
+  arrange(desc(party)) %>% 
+  select(-party) %>%
+  head(15) 
+  ) 
+
+store_2021.2022_df <- store_2021.2022_df[-c(1,5)]
+
+store_2021.2022_df %>%
+  gt() %>% tab_header(
+  "상대적으로 많이 사용한 단어"
+  ) %>% tab_spanner(
+    label = "store (2021)",
+    columns = 1:3
+  ) %>% tab_spanner(
+    label = "store (2022)",
+    columns = 4:6
+  ) %>% cols_label(
+    word...2 = "명사",
+    n...3 = "빈도",
+    log_odds_weighted...4 = "가중상대빈도",
+    word...6 = "명사",
+    n...7 = "빈도",
+    log_odds_weighted...8 = "가중상대빈도"
+  ) %>% fmt_number(
+    columns = starts_with("log"), 
+    decimals = 2
+  )
+
+
+```
+- 2021년에는 '배달', '온라인' 등 비대면 서비스와 관련된 단어 빈도가 상대적으로 높게 나타남.
+- 2021년에는 '맥주'가, 2022년에는 '소주'가 많이 언급되면서 편의점에서의 주류 판매가 주요 트렌드임을 알 수 있음.
+
+
+### 5. 감정분석
+#### 1) 사전 데이터 프레임 만들기
+```{r}
+#| label: 감정분석_사전 데이터 프레임1
+#| echo: true
+#| warning: false
+
+# pkg_v <- c("tidyverse", "tidytext", "epubr", "RcppMeCab", "KoNLP" )
+# lapply(pkg_v, require, ch = T)
+
+# url_v <- "https://github.com/park1200656/KnuSentiLex/archive/refs/heads/master.zip"
+# dest_v <- "data/knusenti.zip"
+# download.file(url = url_v, destfile = dest_v, mode = "wb")
+
+# unzip("knusenti.zip", exdir=outPath)
+```
+
+```{r}
+#| label: 감정분석_사전 데이터 프레임2
+#| echo: true
+#| warning: false
+
+senti_name_v <- list.files("data/knusenti/KnuSentiLex-master/.")[9]
+senti_dic_df <- read_tsv(str_c("data/knusenti/KnuSentiLex-master/", senti_name_v), col_names = F)
+senti_dic_df <- senti_dic_df %>% rename(word = X1, sScore = X2)
+knu_dic_df <- senti_dic_df %>% 
+  filter(!is.na(sScore))
+```
+
+#### 2) 편의점(2021)
+```{r}
+#| label: 감정분석_편의점(2021)
+#| echo: true
+#| warning: false
+
+store_2021_senti_df <- store_2021_df %>% 
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  count(word, sScore, sort = T) %>% 
+  filter(str_length(word) > 1) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  slice_head(n = 20)
+
+store_2021_senti_df %>% 
+  ggplot() + geom_col(aes(n, word, fill = sScore), show.legend = F) +
+    labs(title = "편의점 감정빈도 분석 (2021)")
+```
+
+```{r}
+#| label: 긍정어, 부정어_편의점(2021)
+#| echo: true
+#| warning: false
+
+store_2021_df %>% 
+  unnest_tokens(word, text) %>% 
+  left_join(knu_dic_df) %>% 
+  mutate(sScore = ifelse(sScore >= 1, "긍정",
+                         ifelse(sScore <= -1, "부정", "중립"))) %>% 
+  count(sScore)
+
+store_2021_df %>%   
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  mutate(emotion = ifelse(sScore > 0, "긍정", ifelse(sScore < 0, "부정", "중립"))) %>%
+  mutate(label = ifelse(sScore > 0, "1", ifelse(sScore < 0, "0", "2"))) %>%
+  filter(label != "중립") %>%
+  count(word, emotion, label, sort = T) %>%
+  filter(str_length(word) > 1) %>%
+  group_by(label = ifelse(label > 0, "긍정", "부정")) %>%
+  slice_head(n = 15) %>%
+  ggplot(aes(x = n,
+             y = reorder(word, n), fill = label)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~label, scale = "free") +
+  labs(title = "편의점 긍정어 부정어 (2021)")
+```
+- 편의점(2021) 긍정 이미지 : '할인', '인기', '혜택', '이벤트'. '안전', '사랑', '혁신'
+- 편의점(2021) 부정 이미지 : '폭행', '범죄'의 경우 편의점과 직접적연 연관이라기 보다는 관련 사건들을 설명하는데 사용됨. '부담'의 경우 부정적인 단어를 활용하여 마케팅을 하면서 나타남. '혐오'는 GS25의 홍보포스터가 남성 혐오 논란을 일으키면서 높은 비중을 차지함. 
+
+#### 3) 편의점(2022)
+```{r}
+#| label: 감정분석_편의점(2022)
+#| echo: true
+#| warning: false
+
+store_2022_senti_df <- store_2022_df %>% 
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  count(word, sScore, sort = T) %>% 
+  filter(str_length(word) > 1) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  slice_head(n = 20)
+
+store_2022_senti_df %>% 
+  ggplot() + geom_col(aes(n, word, fill = sScore), show.legend = F) +
+    labs(title = "편의점 감정빈도 분석 (2022)")
+```
+
+```{r}
+#| label: 긍정어, 부정어_편의점(2022)
+#| echo: true
+#| warning: false
+
+store_2022_df %>% 
+  unnest_tokens(word, text) %>% 
+  left_join(knu_dic_df) %>% 
+  mutate(sScore = ifelse(sScore >= 1, "긍정",
+                         ifelse(sScore <= -1, "부정", "중립"))) %>% 
+  count(sScore)
+
+store_2022_df %>%   
+  unnest_tokens(word, text, token = extractNoun) %>% 
+  inner_join(knu_dic_df) %>% 
+  mutate(emotion = ifelse(sScore > 0, "긍정", ifelse(sScore < 0, "부정", "중립"))) %>%
+  mutate(label = ifelse(sScore > 0, "1", ifelse(sScore < 0, "0", "2"))) %>%
+  filter(label != "중립") %>%
+  count(word, emotion, label, sort = T) %>%
+  filter(str_length(word) > 1) %>%
+  group_by(label = ifelse(label > 0, "긍정", "부정")) %>%
+  slice_head(n = 15) %>%
+  ggplot(aes(x = n,
+             y = reorder(word, n), fill = label)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~label, scale = "free") +
+  labs(title = "편의점 긍정어 부정어 (2022)")
+```
+- 편의점(2022) 긍정 이미지 : '인기', '할인', '이벤트', '이벤트'. '안정', '혁신', '성공'
+- 편의점(2022) 부정 이미지 : '부담'의 경우 부정적인 단어를 활용하여 마케팅을 하면서 나타남. '폭행', '범죄'의 경우 편의점과 직접적연 연관이라기 보다는 관련 사건들을 설명하는데 사용됨.'장애인'의 경우, 장애인 직업 훈련과 관련하여 일자리 창출 측면에서 긍정적인 의미와 장애인 편의시설이 갖추어질 필요가 있다는 장애인 이동권 측면에서 부정적인 의미를 함께 내포하고 있음.
+
+
+### 6. 토픽모델링
+#### 1) 편의점(2021)
+```{r}
+#| label: 토픽모델링_편의점(2021)
+#| echo: true
+#| warning: false
+
+store_2021_topic_tk <- store_2021_df %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F)
+
+store_2021_topic_tk <- 
+store_2021_topic_tk %>% 
+  filter(!word %in% c("기자", "편의점")) %>% 
+  filter(str_detect(word, "[:alpha:]+"))
+
+store_2021_combined_df <-
+  store_2021_topic_tk %>%
+  group_by(ID) %>%
+  summarise(text2 = str_flatten(word, " ")) %>%
+  ungroup() %>% 
+  inner_join(store_2021_df, by = "ID")
+
+library(stm)
+library(tm)
+
+processed <- 
+  store_2021_df %>% textProcessor(
+    documents = store_2021_combined_df$text2,
+    metadata = .,
+    wordLengths = c(2, Inf)
+    )
+
+out <-
+  prepDocuments(processed$documents,
+                processed$vocab,
+                processed$meta, 
+                lower.thresh = 0)
+docs <- out$documents
+vocab <- out$vocab
+meta <- out$meta
+topicN <- c(3, 10)
+#storage <- searchK(out$documents, out$vocab, K = topicN)
+
+store_2021_stm_fit <-
+  stm(
+    documents = docs,
+    vocab = vocab,
+    K = 6,
+    data = meta,
+    max.em.its = 75,
+    init.type = "Spectral",
+    seed = 25,
+    verbose = F
+  )
+
+#labelTopics(GS25_stm_fit)
+
+store_2021_topic_name <- tibble(topic = 1:6,
+                     name = c("1. 코로나 상황",
+                              "2. 제품 출시",
+                              "3. 범죄 및 논란",
+                              "4. 결제 방식",
+                              "5. 유통",
+                              "6. 점포 운영"))
+
+store_2021_td_beta <- store_2021_stm_fit %>% tidy(matrix = 'beta') 
+store_2021_topic_name <- store_2021_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 7) %>% 
+  left_join(store_2021_topic_name, by = "topic")
+
+store_2021_topic_name %>% 
+  ggplot(aes(x = beta, 
+             y = reorder_within(term, beta, name),  # 각 주제별로 재정렬
+             fill = name)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~name, scales = "free") +
+  scale_y_reordered() +                             # 재정렬한 y축의 값 설정
+  labs(x = expression("단어 확률분포: "~beta), y = NULL,
+       title = "편의점 주제별 단어 확률 분포 (2021)",
+       subtitle = "주제별로 다른 단어들로 군집") +
+  theme(plot.title = element_text(size = 20))
+```
+
+#### 2) 편의점(2022)
+```{r}
+#| label: 토픽모델링_편의점(2022)
+#| echo: true
+#| warning: false
+
+store_2022_topic_tk <- store_2022_df %>% 
+  mutate(text = str_remove_all(text, "[^(\\w+|\\s)]")) %>%  
+  unnest_tokens(word, text, token = extractNoun, drop = F)
+
+store_2022_topic_tk <- 
+store_2022_topic_tk %>% 
+  filter(!word %in% c("기자", "편의점")) %>% 
+  filter(str_detect(word, "[:alpha:]+"))
+
+store_2022_combined_df <-
+  store_2022_topic_tk %>%
+  group_by(ID) %>%
+  summarise(text2 = str_flatten(word, " ")) %>%
+  ungroup() %>% 
+  inner_join(store_2021_df, by = "ID")
+
+library(stm)
+library(tm)
+
+processed <- 
+  store_2022_df %>% textProcessor(
+    documents = store_2022_combined_df$text2,
+    metadata = .,
+    wordLengths = c(2, Inf)
+    )
+
+out <-
+  prepDocuments(processed$documents,
+                processed$vocab,
+                processed$meta, 
+                lower.thresh = 0)
+docs <- out$documents
+vocab <- out$vocab
+meta <- out$meta
+topicN <- c(3, 10)
+#storage <- searchK(out$documents, out$vocab, K = topicN)
+
+store_2022_stm_fit <-
+  stm(
+    documents = docs,
+    vocab = vocab,
+    K = 6,
+    data = meta,
+    max.em.its = 75,
+    init.type = "Spectral",
+    seed = 25,
+    verbose = F
+  )
+
+#labelTopics(GS25_stm_fit)
+
+store_2022_topic_name <- tibble(topic = 1:6,
+                     name = c("1. 범죄 및 논란",
+                              "2. 점포 운영",
+                              "3. 제품 출시",
+                              "4. 프로모션",
+                              "5. 코로나 상황",
+                              "6. 유통"))
+
+store_2022_td_beta <- store_2022_stm_fit %>% tidy(matrix = 'beta') 
+store_2022_topic_name <- store_2022_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 7) %>% 
+  left_join(store_2022_topic_name, by = "topic")
+
+store_2022_topic_name %>% 
+  ggplot(aes(x = beta, 
+             y = reorder_within(term, beta, name),  # 각 주제별로 재정렬
+             fill = name)) +
+  geom_col(show.legend = F) +
+  facet_wrap(~name, scales = "free") +
+  scale_y_reordered() +                             # 재정렬한 y축의 값 설정
+  labs(x = expression("단어 확률분포: "~beta), y = NULL,
+       title = "편의점 주제별 단어 확률 분포 (2022)",
+       subtitle = "주제별로 다른 단어들로 군집") +
+  theme(plot.title = element_text(size = 20))
+```
+
+
+### 7. 관련보도 상위 주제어
+#### 1) 편의점(2021)
+```{r}
+#| label: 관련보도 상위 주제어_편의점(2021)
+#| echo: true
+#| warning: false
+
+store_2021_td_gamma <- store_2021_stm_fit %>% tidy(matrix = "gamma") 
+store_2021_top_terms <- 
+store_2021_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 5) %>% 
+  select(topic, term) %>% 
+  summarise(terms = str_flatten(term, collapse = ", ")) 
+
+store_2021_gamma_terms <- 
+store_2021_td_gamma %>% 
+  group_by(topic) %>% 
+  summarise(gamma = mean(gamma)) %>% 
+  left_join(store_2021_top_terms, by = 'topic') %>% 
+  left_join(store_2021_topic_name, by = 'topic')
+  
+store_2021_gamma_terms %>% 
+  
+  ggplot(aes(x = gamma, y = reorder(name, gamma), fill = name)) +
+  geom_col(show.legend = F) +
+  geom_text(aes(label = round(gamma, 2)), # 소수점 2자리 
+            hjust = 1.15) +                # 라벨을 막대도표 안쪽으로 이동
+  geom_text(aes(label = terms), 
+            hjust = -0.05) +              # 단어를 막대도표 바깥으로 이동
+  #scale_x_continuous(expand = c(0, 0),    # x축 막대 위치를 Y축쪽으로 조정
+  #                   limit = c(0, 1)) +   # x축 범위 설정
+  labs(x = expression("문서 확률분포"~(gamma)), y = NULL,
+       title = "편의점 관련보도 상위 주제어 (2021)",
+       subtitle = "주제별로 기여도가 높은 단어 중심") +
+  theme(plot.title = element_text(size = 20))
+```
+- '맥주' 관련 상품 판매 및 출시가 주요 트렌드임을 알 수 있음.
+- 코로나 상황으로 인하여 사회적 거리두기, 운영 시간 등 고려해야 할 점들이 있었음. 더불어 코로나 상황으로 인하여 '배달'과 같은 비대면 서비스가 활성화됨.
+- '지역'기반의 운영이 점포 운영에 있어 주요 키워드로 나타남.
+- 일상생활 반경 내 편의점의 갯수가 증가함에 따라 범죄 및 치안과 관련하여 '편의점'에 대한 언급이 많이 나타남.
+- '카드', '포인트' 등 결제할 수 있는 방식이 다양해졌으며, '택배' 등과 같은 부수적인 서비스도 편의점 내에서 이용가능하게 됨.
+
+#### 2) 편의점(2022)
+```{r}
+#| label: 관련보도 상위 주제어_편의점(2022)
+#| echo: true
+#| warning: false
+
+store_2022_td_gamma <- store_2022_stm_fit %>% tidy(matrix = "gamma") 
+store_2022_top_terms <- 
+store_2022_td_beta %>% 
+  group_by(topic) %>% 
+  slice_max(beta, n = 5) %>% 
+  select(topic, term) %>% 
+  summarise(terms = str_flatten(term, collapse = ", ")) 
+
+store_2022_gamma_terms <- 
+store_2022_td_gamma %>% 
+  group_by(topic) %>% 
+  summarise(gamma = mean(gamma)) %>% 
+  left_join(store_2022_top_terms, by = 'topic') %>% 
+  left_join(store_2022_topic_name, by = 'topic')
+  
+store_2022_gamma_terms %>% 
+  
+  ggplot(aes(x = gamma, y = reorder(name, gamma), fill = name)) +
+  geom_col(show.legend = F) +
+  geom_text(aes(label = round(gamma, 2)), # 소수점 2자리 
+            hjust = 1.15) +                # 라벨을 막대도표 안쪽으로 이동
+  geom_text(aes(label = terms), 
+            hjust = -0.05) +              # 단어를 막대도표 바깥으로 이동
+  #scale_x_continuous(expand = c(0, 0),    # x축 막대 위치를 Y축쪽으로 조정
+  #                   limit = c(0, 1)) +   # x축 범위 설정
+  labs(x = expression("문서 확률분포"~(gamma)), y = NULL,
+       title = "편의점 관련보도 상위 주제어 (2022)",
+       subtitle = "주제별로 기여도가 높은 단어 중심") +
+  theme(plot.title = element_text(size = 20))
+```
+- '맥주' 관련 상품 판매 및 출시가 주요 트렌드임을 알 수 있음.
+- 최근 물가 상승으로 인하여 가격이 인상되는 제품들이 있는데, 이와 대비되게 가격 할인 이벤트를 함께 진행함. 그리고 '포켓몬'과 같이 특정 캐릭터 등과 콜라보레이션을 하여 제품 및 이벤트를 진행함.
+- 편의점이 코로나 자가진단키트 주요 구매처 역할을 하고 있음.
+- 일상생활 반경 내 편의점의 갯수가 증가함에 따라 범죄 및 치안과 관련하여 '편의점'에 대한 언급이 많이 나타남. 편의점에 기본적인 판매 기능뿐만 아니라 '청소년', '안전' 등 동네 지킴이 역할을 하는 모습을 보이고 있음.
+
+
+### 8. 결론
+#### 1) 이슈 및 트렌드 비교 분석
+- 2021년, 2022년 모두 '맥주', '소주' 등 주류 상품 출시 및 판매에 집중하는 모습을 보이고 있고, 이에 대해 소비자로 하여금 긍정적인 반응을 얻고 있음.
+- 2021년 '지역' 기반의 점포 운영이 키워드로 등장하였는데, 2022년 편의점에서 '청소년', '안전' 등 동네 치안과 관련하여 여러 캠페인을 실시하는 것으로 보아 '동네 거점 기능'이 더 고도화되었음을 알 수 있음.
+- 2021년에는 '결제 서비스', '배달 서비스' 등 편의점에 기본적인 기능에 집중을 하였다면, 2022년에는 '포켓몬' 등 타 브랜드와의 콜라보레이션을 통해 프로모션을 펼치고 있음.
+
+#### 2) 앞으로의 편의점 방향성
+- 동네 거점 기능 : 커머스 산업군에 있어 '편의점'이 가지고 있는 주요 특징은 동네 곳곳에 점포가 위치하고 있다는 것임. 이 특징을 극대화하기 위해 '동네 거점 기능'이 극대화되고 있으며 이러한 흐름에 맞추어 캠페인 혹은 편의점 기능을 개선할 필요가 있음.
+- 서비스 및 제품의 차별화 : 타 브랜드와의 콜라보를 통해 새로운 상품을 출시하거나 좀 더 편리한 서비스를 제공하고 있는 추세. 단순 유통 중심의 커머스 개념에서 벗어나 브랜드만의 특색을 갖출 필요가 있음.
